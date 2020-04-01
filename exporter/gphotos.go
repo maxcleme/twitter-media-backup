@@ -200,6 +200,12 @@ func getTokenFromWeb(e *gPhotosExporter, conf *oauth2.Config) (*oauth2.Token, er
 func saveTemp(s *twitter.TwitterMedia) (string, error) {
 	// Create the file
 	path := filepath.Join(os.TempDir(), "twitter-media-backup", "gphotos", s.Name)
+
+	err := os.MkdirAll(filepath.Dir(path), 0700)
+	if err != nil {
+		return path, err
+	}
+
 	out, err := os.Create(path)
 	if err != nil {
 		return path, err
