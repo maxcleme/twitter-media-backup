@@ -15,9 +15,10 @@ type TwitterMedia struct {
 }
 
 type fetcher struct {
-	username     string
-	password     string
-	pollInterval time.Duration
+	username         string
+	password         string
+	confirmationCode string
+	pollInterval     time.Duration
 
 	scrapper *twitterscraper.Scraper
 }
@@ -36,6 +37,12 @@ func WithPassword(v string) Option {
 	}
 }
 
+func WithConfirmationCode(v string) Option {
+	return func(f *fetcher) {
+		f.confirmationCode = v
+	}
+}
+
 func WithPollInterval(v time.Duration) Option {
 	return func(f *fetcher) {
 		f.pollInterval = v
@@ -49,7 +56,7 @@ func NewFetcher(opts ...Option) (*fetcher, error) {
 	}
 
 	scraper := twitterscraper.New()
-	if err := scraper.Login(f.username, f.password); err != nil {
+	if err := scraper.Login(f.username, f.password, f.confirmationCode); err != nil {
 		return nil, err
 	}
 	f.scrapper = scraper

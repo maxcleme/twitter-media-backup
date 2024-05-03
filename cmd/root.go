@@ -36,10 +36,12 @@ Supported destination :
 	RunE: func(cmd *cobra.Command, args []string) error {
 		username, _ := cmd.Flags().GetString("twitter_username")
 		password, _ := cmd.Flags().GetString("twitter_password")
+		confirmationCode, _ := cmd.Flags().GetString("twitter_confirmation_code")
 		pollInterval, _ := cmd.Flags().GetDuration("twitter_poll_interval")
 		fetcher, err := twitter.NewFetcher(
 			twitter.WithUsername(username),
 			twitter.WithPassword(password),
+			twitter.WithConfirmationCode(confirmationCode),
 			twitter.WithPollInterval(pollInterval),
 		)
 		if err != nil {
@@ -125,6 +127,7 @@ func init() {
 	rootCmd.Flags().Int64("twitter_since_tweet_id", -1, "Twitter polling since tweet ID")
 	rootCmd.Flags().String("twitter_username", "", "Twitter username")
 	rootCmd.Flags().String("twitter_password", "", "Twitter password")
+	rootCmd.Flags().String("twitter_confirmation_code", "", "Twitter confirmation code (suspicious login or 2FA)")
 	rootCmd.MarkFlagRequired("twitter_username")
 	rootCmd.MarkFlagRequired("twitter_password")
 
