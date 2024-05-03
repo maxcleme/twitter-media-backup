@@ -2,6 +2,7 @@ package exporter
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -29,7 +30,7 @@ func NewLocalExporter(opts ...LocalOption) (*localExporter, error) {
 	return e, nil
 }
 
-func (e *localExporter) Export(media *twitter.TwitterMedia) error {
+func (e *localExporter) Export(_ context.Context, media *twitter.TwitterMedia) error {
 	// Create the file
 	path := filepath.Join(e.rootPath, media.Name)
 	out, err := os.Create(path)

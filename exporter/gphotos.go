@@ -66,13 +66,13 @@ func WithCallbackPort(v int) GPhotosOption {
 	}
 }
 
-func NewGPhotosExporter(opts ...GPhotosOption) (*gPhotosExporter, error) {
+func NewGPhotosExporter(ctx context.Context, opts ...GPhotosOption) (*gPhotosExporter, error) {
 	e := &gPhotosExporter{}
 	for _, opt := range opts {
 		opt(e)
 	}
 
-	oauthClient, err := getClient(e, &oauth2.Config{
+	oauthClient, err := getClient(ctx, e, &oauth2.Config{
 		ClientID:     e.applicationKey,
 		ClientSecret: e.applicationSecret,
 		Scopes:       []string{"https://www.googleapis.com/auth/photoslibrary"},
@@ -94,7 +94,7 @@ func NewGPhotosExporter(opts ...GPhotosOption) (*gPhotosExporter, error) {
 	e.client = client
 
 	// get or create a Photos Album with the specified name.
-	album, err := client.Albums.GetByTitle(context.Background(), e.albumName)
+	album, err := client.Albums.GetByTitle(ctx, e.albumName)
 	if err != nil {
 		return nil, err
 	}
@@ -128,40 +128,30 @@ func saveToken(path string, token *oauth2.Token) error {
 	return json.NewEncoder(f).Encode(token)
 }
 
-func getClient(e *gPhotosExporter, config *oauth2.Config) (*http.Client, error) {
+func getClient(ctx context.Context, e *gPhotosExporter, config *oauth2.Config) (*http.Client, error) {
 	tok, err := tokenFromFile(e.tokenPath)
-
-	// file exist, create client from it
 	if err == nil {
-		return config.Client(context.Background(), tok), nil
+		return config.Client(ctx, tok), nil
 	}
-
-	// generate new file with oauth2 standard flow
-	tok, err = getTokenFromWeb(e, config)
+	tok, err = getTokenFromWeb(ctx, e, config)
 	if err != nil {
 		return nil, err
 	}
 	if err := saveToken(e.tokenPath, tok); err != nil {
 		return nil, err
 	}
-	return config.Client(context.Background(), tok), nil
+	return config.Client(ctx, tok), nil
 }
 
-func getTokenFromWeb(e *gPhotosExporter, conf *oauth2.Config) (*oauth2.Token, error) {
-	ctx := context.Background()
-
+func getTokenFromWeb(ctx context.Context, e *gPhotosExporter, conf *oauth2.Config) (*oauth2.Token, error) {
 	authurl := conf.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-
 	fmt.Printf("Visit the URL for the auth dialog: %v\n", authurl)
-
 	codeCh := make(chan string)
 	errCh := make(chan error)
-
 	rawurl, err := url.Parse(e.redirectURL)
 	if err != nil {
 		return nil, err
 	}
-
 	r := http.NewServeMux()
 	r.HandleFunc(rawurl.Path, func(rw http.ResponseWriter, r *http.Request) {
 		codeCh <- r.URL.Query().Get("code")
@@ -176,7 +166,6 @@ func getTokenFromWeb(e *gPhotosExporter, conf *oauth2.Config) (*oauth2.Token, er
 			errCh <- err
 		}
 	}()
-
 	select {
 	case code := <-codeCh:
 		// receive code from http server
@@ -193,10 +182,9 @@ func getTokenFromWeb(e *gPhotosExporter, conf *oauth2.Config) (*oauth2.Token, er
 		// receive error from http server
 		return nil, err
 	}
-
 }
 
-func (e *gPhotosExporter) Export(media *twitter.TwitterMedia) error {
+func (e *gPhotosExporter) Export(ctx context.Context, media *twitter.TwitterMedia) error {
 	dir, err := os.MkdirTemp("", "twitter-media-backup-gphotos")
 	if err != nil {
 		return err
@@ -207,11 +195,11 @@ func (e *gPhotosExporter) Export(media *twitter.TwitterMedia) error {
 	if err := os.WriteFile(path, media.Payload, 0o644); err != nil {
 		return err
 	}
-	token, err := e.client.Uploader.UploadFile(context.Background(), path)
+	token, err := e.client.Uploader.UploadFile(ctx, path)
 	if err != nil {
 		return err
 	}
-	_, err = e.client.MediaItems.CreateToAlbum(context.Background(), e.albumID, media_items.SimpleMediaItem{
+	_, err = e.client.MediaItems.CreateToAlbum(ctx, e.albumID, media_items.SimpleMediaItem{
 		Filename:    media.Name,
 		UploadToken: token,
 	})
