@@ -124,7 +124,6 @@ func init() {
 
 	// twitter flags
 	rootCmd.Flags().Duration("twitter_poll_interval", time.Second*10, "Twitter polling interval")
-	rootCmd.Flags().Int64("twitter_since_tweet_id", -1, "Twitter polling since tweet ID")
 	rootCmd.Flags().String("twitter_username", "", "Twitter username")
 	rootCmd.Flags().String("twitter_password", "", "Twitter password")
 	rootCmd.Flags().String("twitter_confirmation_code", "", "Twitter confirmation code (suspicious login or 2FA)")
