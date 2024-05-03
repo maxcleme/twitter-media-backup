@@ -1,6 +1,7 @@
 package twitter
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -73,7 +74,7 @@ func (f fetcher) Fetch() (<-chan *TwitterMedia, <-chan error) {
 		for range ticker.C {
 			tweets, _, err := f.scrapper.FetchTweets(f.username, 5, "")
 			if err != nil {
-				errCh <- err
+				errCh <- fmt.Errorf("fetching tweets: %w", err)
 				return
 			}
 			for _, tweet := range tweets {
@@ -85,7 +86,7 @@ func (f fetcher) Fetch() (<-chan *TwitterMedia, <-chan error) {
 					for _, video := range tweet.Videos {
 						payload, err := download(video.URL)
 						if err != nil {
-							errCh <- err
+							errCh <- fmt.Errorf("downloading video: %s: %w", video.URL, err)
 							return
 						}
 						c <- &TwitterMedia{
@@ -98,7 +99,7 @@ func (f fetcher) Fetch() (<-chan *TwitterMedia, <-chan error) {
 					for _, photo := range tweet.Photos {
 						u, err := url.Parse(photo.URL)
 						if err != nil {
-							errCh <- err
+							errCh <- fmt.Errorf("parsing photo URL: %s: %w", photo.URL, err)
 							return
 						}
 						params := u.Query()
@@ -107,7 +108,7 @@ func (f fetcher) Fetch() (<-chan *TwitterMedia, <-chan error) {
 						u.RawQuery = params.Encode()
 						payload, err := download(u.String())
 						if err != nil {
-							errCh <- err
+							errCh <- fmt.Errorf("downloading photo: %s: %w", u.String(), err)
 							return
 						}
 						c <- &TwitterMedia{
