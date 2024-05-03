@@ -65,6 +65,7 @@ Supported destination :
 			applicationSecret, _ := cmd.Flags().GetString("gphotos_oauth2_application_secret")
 			albumName, _ := cmd.Flags().GetString("gphotos_album")
 			exp, err := exporter.NewGPhotosExporter(
+				cmd.Context(),
 				exporter.WithApplicationKey(applicationKey),
 				exporter.WithApplicationSecret(applicationSecret),
 				exporter.WithCallbackPort(port),
@@ -87,7 +88,7 @@ Supported destination :
 			case media := <-mediaCh:
 				for _, exp := range exporters {
 					start := time.Now()
-					if err := exp.Export(media); err != nil {
+					if err := exp.Export(cmd.Context(), media); err != nil {
 						return fmt.Errorf("exporting media: %s: %s: %w", exp.Type(), media.Name, err)
 					}
 					slog.Info("success",

@@ -1,8 +1,12 @@
 package exporter
 
-import "github.com/maxcleme/twitter-media-backup/twitter"
+import (
+	"context"
+
+	"github.com/maxcleme/twitter-media-backup/twitter"
+)
 
 type Exporter interface {
 	Type() string
-	Export(media *twitter.TwitterMedia) error
+	Export(ctx context.Context, media *twitter.TwitterMedia) error
 }
