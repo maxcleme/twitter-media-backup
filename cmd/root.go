@@ -23,13 +23,13 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/maxcleme/twitter-media-backup/exporter"
 	"github.com/maxcleme/twitter-media-backup/twitter"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -64,7 +64,7 @@ Supported destination :
 			twitter.WithPollInterval(pollInterval),
 		)
 		if err != nil {
-			logrus.WithError(err).Fatal("cannot create twitter fetcher")
+			return fmt.Errorf("creating fetcher: %w", err)
 		}
 
 		var exporters []exporter.Exporter
@@ -74,11 +74,10 @@ Supported destination :
 				exporter.WithRootPath(rootPath),
 			)
 			if err != nil {
-				logrus.WithError(err).Fatal("cannot create local exporter")
+				return fmt.Errorf("creating local exporter: %w", err)
 			}
 			exporters = append(exporters, exp)
 		}
-
 		if gphotos, _ := cmd.Flags().GetBool("gphotos"); gphotos {
 			tokenPath, _ := cmd.Flags().GetString("gphotos_oauth2_token_path")
 			redirectURL, _ := cmd.Flags().GetString("gphotos_oauth2_redirect_url")
@@ -95,12 +94,12 @@ Supported destination :
 				exporter.WithAlbumName(albumName),
 			)
 			if err != nil {
-				logrus.WithError(err).Fatal("cannot create gphotos exporter")
+				return fmt.Errorf("creating gphotos exporter: %w", err)
 			}
 			exporters = append(exporters, exp)
 		}
 		if len(exporters) == 0 {
-			logrus.Fatal("at least one exporter need to be enable")
+			return fmt.Errorf("at least one exporter need to be enable")
 		}
 
 		mediaCh, errCh := fetcher.Fetch()
@@ -110,20 +109,15 @@ Supported destination :
 				for _, exp := range exporters {
 					start := time.Now()
 					if err := exp.Export(media); err != nil {
-						logrus.
-							WithField("type", exp.Type()).
-							WithField("media", media.Name).
-							WithError(err).
-							Fatal("cannot export media")
+						return fmt.Errorf("exporting media: %s: %s: %w", exp.Type(), media.Name, err)
 					}
-					logrus.
-						WithField("type", exp.Type()).
-						WithField("media", media.Name).
-						WithField("duration", time.Since(start)).
-						Info("success")
+					slog.With("success",
+						"type", exp.Type(),
+						"media", media.Name,
+						"duration", time.Since(start))
 				}
 			case err := <-errCh:
-				logrus.WithError(err).Fatal("error during media polling")
+				return fmt.Errorf("fetching media: %w", err)
 			}
 		}
 	},
