@@ -9,10 +9,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/gphotosuploader/google-photos-api-client-go/v3/media_items"
 	"github.com/maxcleme/twitter-media-backup/twitter"
 	"golang.org/x/oauth2"
 
-	"github.com/gphotosuploader/google-photos-api-client-go/lib-gphotos"
+	"github.com/gphotosuploader/google-photos-api-client-go/v3"
 )
 
 type gPhotosExporter struct {
@@ -71,7 +72,7 @@ func NewGPhotosExporter(opts ...GPhotosOption) (*gPhotosExporter, error) {
 		opt(e)
 	}
 
-	httpClient, err := getClient(e, &oauth2.Config{
+	oauthClient, err := getClient(e, &oauth2.Config{
 		ClientID:     e.applicationKey,
 		ClientSecret: e.applicationSecret,
 		Scopes:       []string{"https://www.googleapis.com/auth/photoslibrary"},
@@ -86,19 +87,18 @@ func NewGPhotosExporter(opts ...GPhotosOption) (*gPhotosExporter, error) {
 	}
 
 	// httpClient is an authenticated http.Client. See Authentication below.
-	client, err := gphotos.NewClient(httpClient)
+	client, err := gphotos.NewClient(oauthClient)
 	if err != nil {
 		return nil, err
 	}
 	e.client = client
 
 	// get or create a Photos Album with the specified name.
-	album, err := client.GetOrCreateAlbumByName(e.albumName)
+	album, err := client.Albums.GetByTitle(context.Background(), e.albumName)
 	if err != nil {
 		return nil, err
 	}
-	e.albumID = album.Id
-
+	e.albumID = album.ID
 	return e, nil
 }
 
@@ -207,11 +207,15 @@ func (e *gPhotosExporter) Export(media *twitter.TwitterMedia) error {
 	if err := os.WriteFile(path, media.Payload, 0o644); err != nil {
 		return err
 	}
-	_, err = e.client.AddMediaItem(context.Background(), path, e.albumID)
+	token, err := e.client.Uploader.UploadFile(context.Background(), path)
 	if err != nil {
 		return err
 	}
-	return nil
+	_, err = e.client.MediaItems.CreateToAlbum(context.Background(), e.albumID, media_items.SimpleMediaItem{
+		Filename:    media.Name,
+		UploadToken: token,
+	})
+	return err
 }
 
 func (e *gPhotosExporter) Type() string {
