@@ -7,8 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Test to build docker image
-        run: docker build . --tag maxcleme/twitter-media-backup:$GITHUB_SHA
+        uses: docker/build-push-action@v5
+        with:
+          push: false
       - name: Bump version and push tag
         id: tagging
         if: contains(github.ref, 'master')
@@ -16,11 +20,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
-      - name: Publish to registry
-        if: contains(github.ref, 'master')
-        uses: elgohr/Publish-Docker-Github-Action@master
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          name: maxcleme/twitter-media-backup
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          tags: ${{ steps.tagging.outputs.new_tag }},latest
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: maxcleme/twitter-media-backup:${{ steps.tagging.outputs.new_tag }},maxcleme/twitter-media-backup:latest
