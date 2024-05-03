@@ -1,5 +1,7 @@
 # twitter-media-backup
 
+⚠️ Since X/Twitter [doesn't allow your own tweets retrieval with a Free plan anymore](https://developer.twitter.com/en/docs/twitter-api/getting-started/about-twitter-api), this project is relying on https://github.com/n0madic/twitter-scraper to get content, use at your own risk. ⚠️
+
 ## Overview
 
 Idea behind this project is to backup all pictures/videos tweets of one Twitter account somewhere else by using **exporters**. It runs infinitly, waiting for new tweets to backup.
@@ -19,21 +21,11 @@ Put the following file into your home folder :
 ```yaml
 log_level: info
 
-# You are going to create a Twitter developer account and a application 
-# in order to have the following values. 
-twitter_application_key: XXXXXXXXXXXXXXXXXX
-twitter_application_secret: XXXXXXXXXXXXXXXXXX
-twitter_access_token: XXXXXXXXXXXXXXXXXX
-twitter_access_token_secret: XXXXXXXXXXXXXXXXXX
+# Account credentials
+twitter_username: XXXXXXXXXXXXXXXXXX
+twitter_password: XXXXXXXXXXXXXXXXXX
 # Poll new tweets interval
-# Beware of quota/limit if you want to decrease this value
 twitter_poll_interval: 5s
-# Backup media from a specific Tweet ID
-# Every tweet before it will be ignored.
-# -1      : Backup everything after last current tweet
-# 0       : Backup everything
-# XXXXXXX : Backup everything after Tweet XXXXXXX
-twitter_since_tweet_id: -1
 
 # Local exporter configuration, straightforward.
 local: true # Enable exporter
