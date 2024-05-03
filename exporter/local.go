@@ -1,6 +1,7 @@
 package exporter
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -38,7 +39,7 @@ func (e *localExporter) Export(media *twitter.TwitterMedia) error {
 	defer out.Close()
 
 	// Write the body to file
-	_, err = io.Copy(out, media.Content())
+	_, err = io.Copy(out, bytes.NewReader(media.Payload))
 	return err
 }
 

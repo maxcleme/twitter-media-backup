@@ -54,27 +54,13 @@ Supported destination :
 `,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) {
-		level, _ := cmd.Flags().GetString("log_level")
-		lv, err := logrus.ParseLevel(level)
-		if err != nil {
-			logrus.WithError(err).Fatal("cannot parse log level")
-		}
-		logrus.SetLevel(lv)
-
-		applicationKey, _ := cmd.Flags().GetString("twitter_application_key")
-		applicationSecret, _ := cmd.Flags().GetString("twitter_application_secret")
-		accessToken, _ := cmd.Flags().GetString("twitter_access_token")
-		accessTokenSecret, _ := cmd.Flags().GetString("twitter_access_token_secret")
-		since, _ := cmd.Flags().GetInt64("twitter_since_tweet_id")
+	RunE: func(cmd *cobra.Command, args []string) error {
+		username, _ := cmd.Flags().GetString("twitter_username")
+		password, _ := cmd.Flags().GetString("twitter_password")
 		pollInterval, _ := cmd.Flags().GetDuration("twitter_poll_interval")
-
 		fetcher, err := twitter.NewFetcher(
-			twitter.WithApplicationKey(applicationKey),
-			twitter.WithApplicationSecret(applicationSecret),
-			twitter.WithAccessToken(accessToken),
-			twitter.WithAccessTokenSecret(accessTokenSecret),
-			twitter.WithSince(since),
+			twitter.WithUsername(username),
+			twitter.WithPassword(password),
 			twitter.WithPollInterval(pollInterval),
 		)
 		if err != nil {
@@ -100,7 +86,6 @@ Supported destination :
 			applicationKey, _ := cmd.Flags().GetString("gphotos_oauth2_application_key")
 			applicationSecret, _ := cmd.Flags().GetString("gphotos_oauth2_application_secret")
 			albumName, _ := cmd.Flags().GetString("gphotos_album")
-
 			exp, err := exporter.NewGPhotosExporter(
 				exporter.WithApplicationKey(applicationKey),
 				exporter.WithApplicationSecret(applicationSecret),
@@ -108,18 +93,17 @@ Supported destination :
 				exporter.WithRedirectURL(redirectURL),
 				exporter.WithTokenPath(tokenPath),
 				exporter.WithAlbumName(albumName),
-
 			)
 			if err != nil {
 				logrus.WithError(err).Fatal("cannot create gphotos exporter")
 			}
 			exporters = append(exporters, exp)
 		}
-
 		if len(exporters) == 0 {
 			logrus.Fatal("at least one exporter need to be enable")
 		}
-		mediaCh, errCh := fetcher.Content()
+
+		mediaCh, errCh := fetcher.Fetch()
 		for {
 			select {
 			case media := <-mediaCh:
@@ -161,23 +145,14 @@ func init() {
 
 	// misc flags
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.Flags().String("log_level", "info", "Log level")
 
 	// twitter flags
 	rootCmd.Flags().Duration("twitter_poll_interval", time.Second*10, "Twitter polling interval")
 	rootCmd.Flags().Int64("twitter_since_tweet_id", -1, "Twitter polling since tweet ID")
-
-	rootCmd.Flags().String("twitter_application_key", "", "Twitter application key")
-	rootCmd.MarkFlagRequired("twitter_application_key")
-
-	rootCmd.Flags().String("twitter_application_secret", "", "Twitter application secret")
-	rootCmd.MarkFlagRequired("twitter_application_secret")
-
-	rootCmd.Flags().String("twitter_access_token", "", "Twitter user access token")
-	rootCmd.MarkFlagRequired("twitter_access_token")
-
-	rootCmd.Flags().String("twitter_access_token_secret", "", "Twitter user access token secret")
-	rootCmd.MarkFlagRequired("twitter_access_token_secret")
+	rootCmd.Flags().String("twitter_username", "", "Twitter username")
+	rootCmd.Flags().String("twitter_password", "", "Twitter password")
+	rootCmd.MarkFlagRequired("twitter_username")
+	rootCmd.MarkFlagRequired("twitter_password")
 
 	// local exporter flags
 	rootCmd.Flags().Bool("local", false, "enable local exporter")
@@ -188,15 +163,9 @@ func init() {
 	rootCmd.Flags().String("gphotos_oauth2_token_path", filepath.Join(os.TempDir(), "twitter-media-backup", "gphotos", "token.json"), "Google Photos oauth2 token file location")
 	rootCmd.Flags().String("gphotos_oauth2_redirect_url", "http://localhost:8080/callback", "Google Photos oauth2 redirect url used when token file does not exist yet")
 	rootCmd.Flags().Int("gphotos_oauth2_port", 8080, "Google Photos oauth2 port used when token file does not exist yet")
-
 	rootCmd.Flags().String("gphotos_oauth2_application_key", "", "Google Photos oauth2 application key")
-	rootCmd.MarkFlagRequired("gphotos_oauth2_application_key")
-
 	rootCmd.Flags().String("gphotos_oauth2_application_secret", "", "Google Photos oauth2 application secret")
-	rootCmd.MarkFlagRequired("gphotos_oauth2_application_secret")
-
 	rootCmd.Flags().String("gphotos_album", "", "Google Photos album name destination")
-	rootCmd.MarkFlagRequired("gphotos_album")
 }
 
 // initConfig reads in config file and ENV variables if set.

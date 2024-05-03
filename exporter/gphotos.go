@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -197,41 +196,22 @@ func getTokenFromWeb(e *gPhotosExporter, conf *oauth2.Config) (*oauth2.Token, er
 
 }
 
-func saveTemp(s *twitter.TwitterMedia) (string, error) {
-	// Create the file
-	path := filepath.Join(os.TempDir(), "twitter-media-backup", "gphotos", s.Name)
-
-	err := os.MkdirAll(filepath.Dir(path), 0700)
-	if err != nil {
-		return path, err
-	}
-
-	out, err := os.Create(path)
-	if err != nil {
-		return path, err
-	}
-	defer out.Close()
-
-	// Write the body to file
-	_, err = io.Copy(out, s.Content())
-	return path, err
-}
-
 func (e *gPhotosExporter) Export(media *twitter.TwitterMedia) error {
-	// create temp file since following library used doesn't support io.Reader
-	path, err := saveTemp(media)
+	dir, err := os.MkdirTemp("", "twitter-media-backup-gphotos")
 	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(dir)
 
-	// upload temp file to gphotos album
+	path := filepath.Join(dir, media.Name)
+	if err := os.WriteFile(path, media.Payload, 0o644); err != nil {
+		return err
+	}
 	_, err = e.client.AddMediaItem(context.Background(), path, e.albumID)
 	if err != nil {
 		return err
 	}
-
-	// delete temp file
-	return os.Remove(path)
+	return nil
 }
 
 func (e *gPhotosExporter) Type() string {
